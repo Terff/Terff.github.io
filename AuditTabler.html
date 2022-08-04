@@ -1,0 +1,96 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <script>
+        function generate() {
+            let text = document.getElementById('input').value;
+            let startIndex = text.indexOf('[dbo].') + 5;
+            let tableName = text.slice(text.indexOf('[', startIndex) + 1, text.indexOf(']',startIndex));
+            let bodyStartIndex = text.indexOf('(', startIndex) + 1;
+            let columnStartIndex = text.indexOf('[', bodyStartIndex);
+            let commaIndex = text.indexOf(',', columnStartIndex);
+            let constraintIndex = text.indexOf('CONSTRAINT', startIndex);
+            let columns = [];
+            while (columnStartIndex < constraintIndex) {
+                let columnName = text.slice(columnStartIndex, text.indexOf(']', columnStartIndex) + 1);
+                let typeIndex = text.indexOf(' ', columnStartIndex) + 1;
+                let typeName = text.slice(typeIndex, text.indexOf(' ', typeIndex));
+                console.log(columnName, typeName);
+                if (columnName === '[Id]') {
+                    columnName = '[' + tableName + 'Id]';
+                }
+                columns.push({
+                    columnName,
+                    typeName,
+                });
+                columnStartIndex = text.indexOf('[', commaIndex);
+                commaIndex = text.indexOf(',', columnStartIndex);
+            }
+            let auditTableColumns = '';
+            auditTableColumns = auditTableColumns.concat('    [Id] INT NOT NULL PRIMARY KEY IDENTITY(1,1),\n');
+            auditTableColumns = auditTableColumns.concat('    [TransactionType] VARCHAR(10) NOT NULL,\n');
+            auditTableColumns = auditTableColumns.concat('    [TransactionDate] DATETIMEOFFSET NULL DEFAULT(SYSDATETIMEOFFSET()),\n');
+            let triggerColumns = '        [TransactionType],\n';
+            for (let x = 0; x < columns.length; x++) {
+                let currentColumnName = columns[x].columnName;
+                let currentColumnType = columns[x].typeName;
+                let tableColumnString = '    ' + currentColumnName + ' ' + currentColumnType + ' NULL';
+                let triggerColumnString = '        ' + currentColumnName;
+                if (currentColumnName === '[CreateDate]' || currentColumnName === '[UpdateDate]') {
+                    tableColumnString = tableColumnString.concat(' DEFAULT(SYSDATETIMEOFFSET())');
+                } else if (currentColumnName === '[Enabled]') {
+                    tableColumnString = tableColumnString.concat(' DEFAULT(1)');
+                }
+                if (x < columns.length - 1) {
+                    tableColumnString = tableColumnString.concat(',\n');
+                    triggerColumnString = triggerColumnString.concat(',\n');
+                }
+                auditTableColumns = auditTableColumns.concat(tableColumnString);
+                triggerColumns = triggerColumns.concat(triggerColumnString);
+            }
+            let auditTableString = `CREATE TABLE [audit].[${tableName}]\n(\n${auditTableColumns}\n)\n`;
+            auditTableString = auditTableString.replace('{columns}', auditTableColumns);
+            document.getElementById("outputTable").value = auditTableString;
+            let transactionTypes = [{ Name: 'Insert', Action: 'inserted'}, { Name: 'Update', Action: 'inserted'}, { Name: 'Delete', Action: 'deleted'}];
+            let auditTableTriggers = '\nGO\n';
+            for (let x = 0; x < transactionTypes.length; x++) {
+                let tName = transactionTypes[x].Name;
+                let tAction = transactionTypes[x].Action;
+                let tAbbrev = tAction.slice(0, 1);
+                auditTableTriggers = auditTableTriggers.concat(
+                    `\nCREATE TRIGGER ${tableName}${tName}AuditRecord ON [dbo].[${tableName}]\nAFTER ${tName.toUpperCase()} AS\nBEGIN\n    `
+                    + `INSERT INTO [audit].[${tableName}] (\n${triggerColumns}\n    )\n    SELECT '${tName.toUpperCase()}', ${tAbbrev}.*\n`
+                    + `    FROM ${tAction} ${tAbbrev}\nEND\n\nGO\n`
+                );
+            }
+            document.getElementById("outputTrigger").value = auditTableTriggers;
+
+        }
+    </script>
+</head>
+<body>
+    <a href="index.html">Go Back</a>
+    <table style="width:100%;">
+        <tr>
+            <td>
+                <label for="input">Paste table here:</label>
+                </br>
+                <textarea id="input" style="width:80%; margin: 5px;" rows="50"></textarea>
+                </br>
+                <button id="submit" onclick="generate()">Go!</button>
+            </td>
+            <td>
+                <label for="output">Output:</label>
+                </br>
+                <textarea id="outputTable" style="width:80%; margin: 5px;" rows="25"></textarea>
+                </br>
+                <textarea id="outputTrigger" style="width:80%; margin: 5px;" rows="25"></textarea>
+
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

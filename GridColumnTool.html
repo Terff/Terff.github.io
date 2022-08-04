@@ -1,0 +1,50 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <script>
+        function convert() {
+            let text = document.getElementById('input').value;
+            let startIndex = text.indexOf('const');
+            let keyIndex = startIndex;
+            let quoteIndex = 0;
+            let commaIndex = 0;
+            let count = 0;
+            while (startIndex !== -1) {
+                keyIndex = text.indexOf('key:', startIndex);
+                startIndex = text.indexOf('const', startIndex + 1);
+                count = 1
+                while ((keyIndex < startIndex || startIndex === -1) && keyIndex !== -1) {
+                    quoteIndex = text.indexOf("'", keyIndex);
+                    commaIndex = text.indexOf(",", keyIndex);
+                    text = text.slice(0, quoteIndex + 1) + count + text.slice(commaIndex - 1);
+                    keyIndex = text.indexOf('key:', quoteIndex);
+                    count = count + 1;
+                }
+            }
+            document.getElementById("output").value = text;
+        }
+    </script>
+</head>
+<body>
+    <a href="index.html">Go Back</a>
+    <table style="width:100%;">
+        <tr>
+            <td>
+                <label for="input">Paste grid columns here:</label>
+                </br>
+                <textarea id="input" style="width:80%; margin: 5px;" rows="50"></textarea>
+                </br>
+                <button id="submit" onclick="convert()">Go!</button>
+            </td>
+            <td>
+                <label for="output">Output:</label>
+                </br>
+                <textarea id="output" style="width:80%; margin: 5px;" rows="50"></textarea>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
