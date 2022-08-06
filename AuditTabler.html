@@ -110,13 +110,13 @@
                     }
                     columnString1 = columnString1.concat(currentColumnName);
                     columnString2 = columnString2.concat(`msource.${currentColumnName}`);
-                    if(!currentColumnIsId && !currentColumnName === '[CreateUserId]' && !currentColumnName === '[CreateDate]')
+                    if(!currentColumnIsId && currentColumnName !== '[CreateUserId]' && currentColumnName !== '[CreateDate]')
                         columnString3 = columnString3.concat(`\t\t\t\t${currentColumnName} = msource.${currentColumnName}`);
 
                     if (x < columns.length - 1) {
                         columnString1 = columnString1.concat(', ');
                         columnString2 = columnString2.concat(', ');
-                        if(!currentColumnIsId && !currentColumnName === '[CreateUserId]' && !currentColumnName === '[CreateDate]')
+                        if(!currentColumnIsId && currentColumnName !== '[CreateUserId]' && currentColumnName !== '[CreateDate]')
                             columnString3 = columnString3.concat(',\n');
                         valuesRowString = valuesRowString.concat(', ')
                     }
