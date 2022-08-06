@@ -11,23 +11,27 @@
             let tableName = text.slice(text.indexOf('[', startIndex) + 1, text.indexOf(']',startIndex));
             let bodyStartIndex = text.indexOf('(', startIndex) + 1;
             let columnStartIndex = text.indexOf('[', bodyStartIndex);
-            let commaIndex = text.indexOf(',', columnStartIndex);
+            let nextLineIndex = text.indexOf('\n', columnStartIndex);
             let constraintIndex = text.indexOf('CONSTRAINT', startIndex);
             let columns = [];
-            while (columnStartIndex < constraintIndex) {
+            console.log(constraintIndex,columnStartIndex);
+            while ((constraintIndex !== -1 && columnStartIndex < constraintIndex) || (columnStartIndex !== -1 && constraintIndex === -1)) {
+                console.log(constraintIndex,columnStartIndex);
                 let columnName = text.slice(columnStartIndex, text.indexOf(']', columnStartIndex) + 1);
                 let typeIndex = text.indexOf(' ', columnStartIndex) + 1;
                 let typeName = text.slice(typeIndex, text.indexOf(' ', typeIndex));
-                console.log(columnName, typeName);
+                let isId = false;
                 if (columnName === '[Id]') {
                     columnName = '[' + tableName + 'Id]';
+                    isId = true;
                 }
                 columns.push({
                     columnName,
                     typeName,
+                    isId,
                 });
-                columnStartIndex = text.indexOf('[', commaIndex);
-                commaIndex = text.indexOf(',', columnStartIndex);
+                columnStartIndex = text.indexOf('[', nextLineIndex);
+                nextLineIndex = text.indexOf('\n', columnStartIndex);
             }
             let auditTableColumns = '';
             auditTableColumns = auditTableColumns.concat('    [Id] INT NOT NULL PRIMARY KEY IDENTITY(1,1),\n');
@@ -53,7 +57,7 @@
             }
             let auditTableString = `CREATE TABLE [audit].[${tableName}]\n(\n${auditTableColumns}\n)\n`;
             auditTableString = auditTableString.replace('{columns}', auditTableColumns);
-            document.getElementById("outputTable").value = auditTableString;
+            document.getElementById('outputTable').value = auditTableString;
             let transactionTypes = [{ Name: 'Insert', Action: 'inserted'}, { Name: 'Update', Action: 'inserted'}, { Name: 'Delete', Action: 'deleted'}];
             let auditTableTriggers = '\nGO\n';
             for (let x = 0; x < transactionTypes.length; x++) {
@@ -66,8 +70,97 @@
                     + `    FROM ${tAction} ${tAbbrev}\nEND\n\nGO\n`
                 );
             }
-            document.getElementById("outputTrigger").value = auditTableTriggers;
+            document.getElementById('outputTrigger').value = auditTableTriggers;
+            let generateSeedScripts = document.getElementById('seedScriptTemplate').checked;
+            if(generateSeedScripts)
+            {
+                let columnString1 = ''; //[columnName]
+                let columnString2 = ''; //msource.[columnName]
+                let columnString3 = ''; //update portion columns
+                let valuesRowString = ''; //simple string for values, auto generates dummy data based on column type
+                for (let x = 0; x < columns.length; x++) {
+                    let currentColumnName = columns[x].columnName;
+                    let currentColumnType = columns[x].typeName;
+                    let currentColumnIsId = columns[x].isId;
 
+                    if(currentColumnIsId) {
+                        currentColumnName = '[Id]';
+                        valuesRowString = valuesRowString.concat('{Id}');
+                    } else {
+                        console.log(currentColumnType.toUpperCase());
+                        switch(currentColumnType.toUpperCase()) {
+                            case 'INT':
+                                valuesRowString = valuesRowString.concat('0');
+                                break;
+                            case 'FLOAT':
+                                valuesRowString = valuesRowString.concat('0.0');
+                                break;
+                            case 'BIT':
+                                valuesRowString = valuesRowString.concat('1');
+                                break;
+                            case 'DATETIMEOFFSET':
+                                valuesRowString = valuesRowString.concat('SYSDATETIMEOFFSET()');
+                                break;
+                            default:
+                                if(currentColumnType.indexOf('DECIMAL') !== -1) {
+                                    valuesRowString = valuesRowString.concat('0.0');
+                                } else {
+                                    valuesRowString = valuesRowString.concat(`'${currentColumnName}'`)
+                                }
+                        }
+                    }
+                    columnString1 = columnString1.concat(currentColumnName);
+                    columnString2 = columnString2.concat(`msource.${currentColumnName}`);
+                    columnString3 = columnString3.concat(`\t\t\t\t${currentColumnName} = msource.${currentColumnName}`);
+
+                    if (x < columns.length - 1) {
+                        columnString1 = columnString1.concat(', ');
+                        columnString2 = columnString2.concat(', ');
+                        columnString3 = columnString3.concat(',\n');
+                        valuesRowString = valuesRowString.concat(', ')
+                    }
+                }
+                
+
+                let valueSection = '';
+                let numValueRows = document.getElementById('numValues').value;
+                for(let x = 0; x < numValueRows; x++) {
+                    valueSection = valueSection.concat(`\t(${valuesRowString.replace('{Id}',x+1)})`);
+                    if (x < numValueRows - 1) {
+                        valueSection = valueSection.concat(',\n');
+                    }
+                }
+
+                let seedScriptTemplate = `SET IDENTITY_INSERT [dbo].[${tableName}] ON\nMERGE [dbo].[${tableName}] AS mtarget\nUSING (VALUES\n`+
+                    `${valueSection}\n) AS msource(${columnString1})\nON mtarget.Id = msource.Id\nWHEN MATCHED THEN\n\tUPDATE SET\n${columnString3}`+
+                    `\nWHEN NOT MATCHED THEN\nINSERT(${columnString1})\nVALUES(${columnString2});\nSET IDENTITY_INSERT [dbo].[${tableName}] OFF`;
+
+                document.getElementById('outputSeedScripts').value = seedScriptTemplate;
+            }
+        }
+
+        function onCheck()
+        {
+            let checked = document.getElementById('seedScriptTemplate').checked;
+            let outputTable = document.getElementById('outputTable');
+            let outputTrigger = document.getElementById('outputTrigger');
+            let outputSeedScripts = document.getElementById('outputSeedScripts');
+            let numValues = document.getElementById('numValues');
+            let numValuesLabel = document.getElementById('numValuesLabel');
+
+            if(checked) {
+                outputTable.setAttribute('rows','14');
+                outputTrigger.setAttribute('rows','14');
+                outputSeedScripts.removeAttribute('hidden');
+                numValues.removeAttribute('hidden');
+                numValuesLabel.removeAttribute('hidden');
+            } else {
+                outputTable.setAttribute('rows','21');
+                outputTrigger.setAttribute('rows','21');
+                outputSeedScripts.setAttribute('hidden','true');
+                numValues.setAttribute('hidden','true');
+                numValuesLabel.setAttribute('hidden','true');
+            }
         }
     </script>
 </head>
@@ -75,19 +168,33 @@
     <a href="index.html">Go Back</a>
     <table style="width:100%;">
         <tr>
-            <td>
+            <td style="width:50;">
                 <label for="input">Paste table here:</label>
                 </br>
-                <textarea id="input" style="width:80%; margin: 5px;" rows="50"></textarea>
+                <textarea id="input" style="width:80%; margin: 5px;" rows="42"></textarea>
+                </br>
+            </td>
+            <td style="width:50%;">
+                <label for="output">Output:</label>
+                </br>
+                <textarea id="outputTable" style="width:80%; margin: 5px;" rows="21"></textarea>
+                </br>
+                <textarea id="outputTrigger" style="width:80%; margin: 5px;" rows="21"></textarea>
+                </br>
+                <textarea id="outputSeedScripts" style="width:80%; margin: 5px;" rows="14" hidden></textarea>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <input type="checkbox" id="seedScriptTemplate" name="seedScriptTemplate" value="Yes" onclick="onCheck()">
+                <label for="seedScriptTemplate">Include seed script</label>
+                <br>
+                <input type="number" id="numValues" name="numValues" value="1" style="width:5%" onclick="onCheck()" hidden>
+                <label for="numValues" id="numValuesLabel" hidden>Number of pre-generated seed script rows</label>
                 </br>
                 <button id="submit" onclick="generate()">Go!</button>
             </td>
             <td>
-                <label for="output">Output:</label>
-                </br>
-                <textarea id="outputTable" style="width:80%; margin: 5px;" rows="25"></textarea>
-                </br>
-                <textarea id="outputTrigger" style="width:80%; margin: 5px;" rows="25"></textarea>
 
             </td>
         </tr>
