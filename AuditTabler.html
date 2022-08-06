@@ -89,7 +89,11 @@
                     } else {
                         switch(currentColumnType.toUpperCase()) {
                             case 'INT':
-                                valuesRowString = valuesRowString.concat('0');
+                                if(currentColumnName === '[CreateUserId]' || currentColumnName === '[UpdateUserId]') {
+                                    valuesRowString = valuesRowString.concat('1');
+                                } else {
+                                    valuesRowString = valuesRowString.concat('0');
+                                }
                                 break;
                             case 'FLOAT':
                                 valuesRowString = valuesRowString.concat('0.0');
