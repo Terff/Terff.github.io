@@ -131,9 +131,9 @@
                     }
                 }
 
-                let seedScriptTemplate = `SET IDENTITY_INSERT [dbo].[${tableName}] ON\nMERGE [dbo].[${tableName}] AS mtarget\nUSING (VALUES\n`+
+                let seedScriptTemplate = `SET IDENTITY_INSERT [dbo].[${tableName}] ON;\nMERGE [dbo].[${tableName}] AS mtarget\nUSING (VALUES\n`+
                     `${valueSection}\n) AS msource(${columnString1})\nON mtarget.Id = msource.Id\nWHEN MATCHED THEN\n\tUPDATE SET\n${columnString3}`+
-                    `\nWHEN NOT MATCHED THEN\nINSERT(${columnString1})\nVALUES(${columnString2});\nSET IDENTITY_INSERT [dbo].[${tableName}] OFF`;
+                    `\nWHEN NOT MATCHED THEN\nINSERT(${columnString1})\nVALUES(${columnString2});\nSET IDENTITY_INSERT [dbo].[${tableName}] OFF;`;
 
                 document.getElementById('outputSeedScripts').value = seedScriptTemplate;
             }
