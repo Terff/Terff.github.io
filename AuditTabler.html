@@ -87,7 +87,6 @@
                         currentColumnName = '[Id]';
                         valuesRowString = valuesRowString.concat('{Id}');
                     } else {
-                        console.log(currentColumnType.toUpperCase());
                         switch(currentColumnType.toUpperCase()) {
                             case 'INT':
                                 valuesRowString = valuesRowString.concat('0');
@@ -111,12 +110,14 @@
                     }
                     columnString1 = columnString1.concat(currentColumnName);
                     columnString2 = columnString2.concat(`msource.${currentColumnName}`);
-                    columnString3 = columnString3.concat(`\t\t\t\t${currentColumnName} = msource.${currentColumnName}`);
+                    if(!currentColumnIsId)
+                        columnString3 = columnString3.concat(`\t\t\t\t${currentColumnName} = msource.${currentColumnName}`);
 
                     if (x < columns.length - 1) {
                         columnString1 = columnString1.concat(', ');
                         columnString2 = columnString2.concat(', ');
-                        columnString3 = columnString3.concat(',\n');
+                        if(!currentColumnIsId)
+                            columnString3 = columnString3.concat(',\n');
                         valuesRowString = valuesRowString.concat(', ')
                     }
                 }
