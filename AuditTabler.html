@@ -14,9 +14,7 @@
             let nextLineIndex = text.indexOf('\n', columnStartIndex);
             let constraintIndex = text.indexOf('CONSTRAINT', startIndex);
             let columns = [];
-            console.log(constraintIndex,columnStartIndex);
             while ((constraintIndex !== -1 && columnStartIndex < constraintIndex) || (columnStartIndex !== -1 && constraintIndex === -1)) {
-                console.log(constraintIndex,columnStartIndex);
                 let columnName = text.slice(columnStartIndex, text.indexOf(']', columnStartIndex) + 1);
                 let typeIndex = text.indexOf(' ', columnStartIndex) + 1;
                 let typeName = text.slice(typeIndex, text.indexOf(' ', typeIndex));
