@@ -1,0 +1,80 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <script>
+        function createColumn(val) {
+            let col = document.createElement("td");
+            let text = document.createTextNode(val);
+            col.appendChild(text);
+            return col;
+        }
+        function generate() {
+            let text = document.getElementById('input').value;
+            let outputTable = document.getElementById('xmlOutput');
+            let parser = new DOMParser();
+            let xml = parser.parseFromString(text, "text/xml");
+            let lines = xml.getElementsByTagName("pidx:InvoiceLineItem")
+            var parsed = [];
+            for(x = 0; x < lines.length; x++) {
+                let currentLine = lines[x];
+                let children = currentLine.childNodes;
+                let location = currentLine.getElementsByTagName("pidx:LineItemDescription")[0].innerHTML;
+                let uom = currentLine.getElementsByTagName("pidx:UnitOfMeasureCode")[0].innerHTML;
+                let rate = currentLine.getElementsByTagName("pidx:MonetaryAmount")[0].innerHTML;
+                let amount = currentLine.getElementsByTagName("pidx:Quantity")[0].innerHTML;
+                let multiplied = Math.round((parseFloat(rate) * parseFloat(amount))*100.0)/100.0
+                parsed.push(
+                    {
+                        location,
+                        uom,
+                        rate,
+                        amount,
+                        multiplied,
+                    }
+                );
+            }
+            for(x = 0; x < parsed.length; x++)
+            {
+                let elem = parsed[x];
+                let row = document.createElement("tr");
+                row.appendChild(createColumn(elem.location));
+                row.appendChild(createColumn(elem.uom));
+                row.appendChild(createColumn(elem.rate));
+                row.appendChild(createColumn(elem.amount));
+                row.appendChild(createColumn(elem.multiplied));
+                outputTable.appendChild(row);
+            }
+        }
+    </script>
+</head>
+<body>
+    <a href="index.html">Go Back</a>
+    <table style="width:100%;">
+        <tr>
+            <td style="width:50;">
+                <label for="input">Paste xml here:</label>
+                </br>
+                <textarea id="input" style="width:80%; margin: 5px;" rows="42"></textarea>
+                </br>
+            </td>
+            <td style="width:50%;">
+                <label for="output">Output:</label>
+                </br>
+                <table id="xmlOutput">
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <button id="submit" onclick="generate()">Go!</button>
+            </td>
+            <td>
+
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
